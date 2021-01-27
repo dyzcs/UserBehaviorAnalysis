@@ -18,7 +18,7 @@ object HotItems {
         env.setParallelism(1)
         // 定义事件时间语义
         // flink 1.12 之后默认不用设置
-        //        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+        // env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
         // 从文件中读取数据，并转换成样例类，提取时间戳生成watermark
         val inputStream = env.readTextFile("UserBehavior.csv")
