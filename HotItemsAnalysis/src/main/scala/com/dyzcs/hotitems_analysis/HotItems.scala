@@ -1,6 +1,7 @@
 package com.dyzcs.hotitems_analysis
 
 import org.apache.flink.streaming.api.scala._
+import org.apache.flink.streaming.api.windowing.time.Time
 
 /**
  * Created by Administrator on 2021/1/27.
@@ -26,6 +27,11 @@ object HotItems {
             val arr = data.split(",")
             UserBehavior(arr(0).toLong, arr(1).toLong, arr(2).toInt, arr(3), arr(4).toLong)
         }).assignAscendingTimestamps(_.timestamp * 1000L)
+
+        // 得到窗口聚合结果
+        val aggStream = dataStream.filter(_.behavior == "pv")
+                .keyBy(_.itemId)
+                .timeWindow(Time.hours(1), Time.minutes(5))
 
         env.execute("hot items")
     }
