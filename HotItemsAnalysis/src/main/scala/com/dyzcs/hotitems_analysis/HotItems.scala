@@ -1,7 +1,12 @@
 package com.dyzcs.hotitems_analysis
 
+import org.apache.flink.api.common.functions.AggregateFunction
+import org.apache.flink.api.java.tuple.{Tuple, Tuple1}
 import org.apache.flink.streaming.api.scala._
+import org.apache.flink.streaming.api.scala.function.WindowFunction
 import org.apache.flink.streaming.api.windowing.time.Time
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow
+import org.apache.flink.util.Collector
 
 /**
  * Created by Administrator on 2021/1/27.
@@ -30,9 +35,31 @@ object HotItems {
 
         // 得到窗口聚合结果
         val aggStream = dataStream.filter(_.behavior == "pv")
-                .keyBy(_.itemId)
+                .keyBy("itemId")
                 .timeWindow(Time.hours(1), Time.minutes(5))
+                .aggregate(new CountAgg(), new ItemViewWindowResult())
 
         env.execute("hot items")
+    }
+}
+
+// 自定义预聚合函数AggregateFunction
+class CountAgg() extends AggregateFunction[UserBehavior, Long, Long] {
+    override def createAccumulator(): Long = 0L
+
+    // 每来一条数据调用一次add，count+1
+    override def add(in: UserBehavior, acc: Long): Long = acc + 1
+
+    override def getResult(acc: Long): Long = acc
+
+    override def merge(a: Long, b: Long): Long = a + b
+}
+
+class ItemViewWindowResult() extends WindowFunction[Long, ItemViewCount, Tuple, TimeWindow] {
+    override def apply(key: Tuple, window: TimeWindow, input: Iterable[Long], out: Collector[ItemViewCount]): Unit = {
+        val itemId = key.asInstanceOf[Tuple1[Long]].f0
+        val windowEnd = window.getEnd
+        val count = input.iterator.next()
+        out.collect(ItemViewCount(itemId, windowEnd, count))
     }
 }
